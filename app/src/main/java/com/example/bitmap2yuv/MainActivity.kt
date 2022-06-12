@@ -1,14 +1,12 @@
 package com.example.bitmap2yuv
 
-import android.graphics.Bitmap
-import android.graphics.Color
-import android.graphics.ImageFormat
-import android.graphics.SurfaceTexture
+import android.graphics.*
 import android.media.ImageWriter
 import android.os.Bundle
 import android.view.Surface
 import android.view.TextureView
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.graphics.scale
 import androidx.lifecycle.lifecycleScope
 import io.github.crow_misia.libyuv.AbgrBuffer
 import io.github.crow_misia.libyuv.I420Buffer
@@ -32,8 +30,10 @@ class MainActivity : AppCompatActivity(), TextureView.SurfaceTextureListener {
 
     private fun createImageWriter(surface: Surface, width: Int, height: Int) {
         yuvBuffer = I420Buffer.allocate(width, height)
-        bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888)
-        bitmap?.eraseColor(Color.BLUE)
+        //bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
+        //    eraseColor(Color.BLUE)
+        //}
+        bitmap = BitmapFactory.decodeStream(assets.open("selfie.jpeg")).scale(width, height)
         val argbBuffer = AbgrBuffer.allocate(width, height)
         bitmap?.copyPixelsToBuffer(argbBuffer.asBuffer())
         argbBuffer.convertTo(yuvBuffer!!)
