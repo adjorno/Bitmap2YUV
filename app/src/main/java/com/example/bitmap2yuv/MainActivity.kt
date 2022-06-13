@@ -1,6 +1,8 @@
 package com.example.bitmap2yuv
 
-import android.graphics.*
+import android.graphics.BitmapFactory
+import android.graphics.ImageFormat
+import android.graphics.SurfaceTexture
 import android.media.ImageWriter
 import android.os.Bundle
 import android.view.Surface
@@ -10,13 +12,13 @@ import androidx.core.graphics.scale
 import androidx.lifecycle.lifecycleScope
 import io.github.crow_misia.libyuv.AbgrBuffer
 import io.github.crow_misia.libyuv.I420Buffer
+import io.github.crow_misia.libyuv.ext.ImageExt.toI420Buffer
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class MainActivity : AppCompatActivity(), TextureView.SurfaceTextureListener {
     private lateinit var textureView: TextureView
-    private var bitmap: Bitmap? = null
     private var imageWriter: ImageWriter? = null
     private var yuvBuffer: I420Buffer? = null
     private var running = false
@@ -29,14 +31,12 @@ class MainActivity : AppCompatActivity(), TextureView.SurfaceTextureListener {
     }
 
     private fun createImageWriter(surface: Surface, width: Int, height: Int) {
-        yuvBuffer = I420Buffer.allocate(width, height)
-        //bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888).apply {
-        //    eraseColor(Color.BLUE)
-        //}
-        bitmap = BitmapFactory.decodeStream(assets.open("selfie.jpeg")).scale(width, height)
-        val argbBuffer = AbgrBuffer.allocate(width, height)
-        bitmap?.copyPixelsToBuffer(argbBuffer.asBuffer())
-        argbBuffer.convertTo(yuvBuffer!!)
+        yuvBuffer = I420Buffer.allocate(width, height).apply {
+            val abgrBuffer = AbgrBuffer.allocate(width, height).apply {
+                BitmapFactory.decodeStream(assets.open("selfie.jpeg")).scale(width, height).copyPixelsToBuffer(asBuffer())
+            }
+            abgrBuffer.convertTo(this)
+        }
         imageWriter = ImageWriter.newInstance(surface, 1, ImageFormat.YUV_420_888)
         startRendering()
     }
@@ -49,9 +49,7 @@ class MainActivity : AppCompatActivity(), TextureView.SurfaceTextureListener {
                     while (running) {
                         delay(1000)
                         val image = imageWriter.dequeueInputImage()
-                        image.planes[0].buffer.put(yuvBuffer.planeY.buffer)
-                        image.planes[1].buffer.put(yuvBuffer.planeU.buffer)
-                        image.planes[2].buffer.put(yuvBuffer.planeV.buffer)
+                        yuvBuffer.convertTo(image.toI420Buffer())
                         imageWriter.queueInputImage(image)
                     }
                 }
